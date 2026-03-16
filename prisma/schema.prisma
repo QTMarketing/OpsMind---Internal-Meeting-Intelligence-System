@@ -1,13 +1,70 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ──────────────────────────────────────────
+// Meeting — the core entity. All other models relate to a meeting.
+// ──────────────────────────────────────────
+model Meeting {
+  id         String     @id @default(cuid())
+  title      String
+  date       DateTime
+  transcript String?    @db.Text
+  summary    String?    @db.Text
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  tasks      Task[]
+  decisions  Decision[]
+  ideas      Idea[]
+}
+
+// ──────────────────────────────────────────
+// Task — action items extracted from a meeting
+// ──────────────────────────────────────────
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  status      String    @default("pending") // pending | in_progress | done
+  assignee    String?
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meetingId String
+}
+
+// ──────────────────────────────────────────
+// Decision — key decisions recorded during a meeting
+// ──────────────────────────────────────────
+model Decision {
+  id        String   @id @default(cuid())
+  summary   String   @db.Text
+  madeBy    String?
+  createdAt DateTime @default(now())
+
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meetingId String
+}
+
+// ──────────────────────────────────────────
+// Idea — brainstormed ideas captured during a meeting
+// ──────────────────────────────────────────
+model Idea {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  author    String?
+  createdAt DateTime @default(now())
+
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meetingId String
 }

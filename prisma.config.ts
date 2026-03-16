@@ -9,6 +9,7 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
+    // Pooled URL (PgBouncer) — used by Prisma Client at runtime
     url: process.env["DATABASE_URL"],
   },
 });
