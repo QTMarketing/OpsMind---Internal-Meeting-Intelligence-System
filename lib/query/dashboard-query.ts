@@ -1,0 +1,112 @@
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  createTask,
+  fetchMeetingDetail,
+  fetchMeetings,
+  fetchTasks,
+  updateTask,
+  uploadAudio,
+} from "@/lib/api/dashboard-adapters";
+import type { Task, TaskInput } from "@/lib/types/dashboard";
+
+export const dashboardQueryKeys = {
+  tasks: ["dashboard", "tasks"] as const,
+  meetings: ["dashboard", "meetings"] as const,
+  meetingDetail: (meetingId: string) =>
+    ["dashboard", "meetings", "detail", meetingId] as const,
+};
+
+export function useTasksQuery() {
+  return useQuery({
+    queryKey: dashboardQueryKeys.tasks,
+    queryFn: fetchTasks,
+  });
+}
+
+export function useMeetingsQuery() {
+  return useQuery({
+    queryKey: dashboardQueryKeys.meetings,
+    queryFn: fetchMeetings,
+  });
+}
+
+export function useMeetingDetailQuery(meetingId: string | null) {
+  return useQuery({
+    queryKey: meetingId ? dashboardQueryKeys.meetingDetail(meetingId) : ["dashboard", "meetings", "detail", "none"],
+    queryFn: () => fetchMeetingDetail(meetingId as string),
+    enabled: Boolean(meetingId),
+  });
+}
+
+export function useUploadAudioMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      onProgress,
+    }: {
+      file: File;
+      onProgress?: (progress: number) => void;
+    }) => uploadAudio(file, onProgress),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.meetings });
+    },
+  });
+}
+
+export function useCreateTaskMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TaskInput) => createTask(input),
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.tasks });
+      const previous = queryClient.getQueryData<Task[]>(dashboardQueryKeys.tasks) ?? [];
+      const optimistic: Task = {
+        id: `optimistic-${Date.now()}`,
+        ...input,
+      };
+      queryClient.setQueryData<Task[]>(dashboardQueryKeys.tasks, [optimistic, ...previous]);
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(dashboardQueryKeys.tasks, context.previous);
+      }
+    },
+    onSuccess: (createdTask) => {
+      queryClient.setQueryData<Task[]>(dashboardQueryKeys.tasks, (current = []) => {
+        return [createdTask, ...current.filter((task) => !task.id.startsWith("optimistic-"))];
+      });
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.tasks });
+    },
+  });
+}
+
+export function useUpdateTaskMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, input }: { taskId: string; input: TaskInput }) => updateTask(taskId, input),
+    onMutate: async ({ taskId, input }) => {
+      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.tasks });
+      const previous = queryClient.getQueryData<Task[]>(dashboardQueryKeys.tasks) ?? [];
+      queryClient.setQueryData<Task[]>(dashboardQueryKeys.tasks, (current = []) =>
+        current.map((task) => (task.id === taskId ? { ...task, ...input } : task)),
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(dashboardQueryKeys.tasks, context.previous);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.tasks });
+    },
+  });
+}

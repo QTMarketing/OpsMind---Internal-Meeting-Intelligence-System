@@ -1,26 +1,160 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f8fb;
+  --surface: #ffffff;
+  --surface-muted: #f1f4f9;
+  --foreground: #111827;
+  --foreground-muted: #6b7280;
+  --border: #e5e7eb;
+  --ring: #1d4ed8;
+  --accent: #1d4ed8;
+  --accent-foreground: #ffffff;
+  --accent-subtle: rgba(29, 78, 216, 0.12);
+  --success: #15803d;
+  --warning: #b45309;
+  --destructive: #b91c1c;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f1115;
+    --surface: #141821;
+    --surface-muted: #1e2530;
+    --foreground: #f3f4f6;
+    --foreground-muted: #9ca3af;
+    --border: #303846;
+    --ring: #60a5fa;
+    --accent: #60a5fa;
+    --accent-foreground: #0f172a;
+    --accent-subtle: rgba(96, 165, 250, 0.2);
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --destructive: #f87171;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  line-height: 1.5;
+}
+
+* {
+  border-color: var(--border);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.surface {
+  background: var(--surface);
+}
+
+.surface-muted {
+  background: var(--surface-muted);
+}
+
+.text-muted {
+  color: var(--foreground-muted);
+}
+
+.app-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.app-input,
+.app-select {
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.app-button {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.app-button-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.app-button-ghost {
+  background: transparent;
+  color: var(--foreground);
+}
+
+.nav-item {
+  border-radius: var(--radius-sm);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 42%, transparent);
+}
+
+.nav-item:hover {
+  background: var(--surface-muted);
+}
+
+.nav-item-active {
+  color: var(--accent);
+  font-weight: 600;
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--accent-subtle);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0.5rem;
+  z-index: 50;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--foreground);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.skip-link:focus {
+  left: 0.5rem;
 }
