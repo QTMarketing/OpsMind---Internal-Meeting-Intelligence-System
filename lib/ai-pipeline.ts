@@ -1,9 +1,7 @@
 import openai from "./openai";
+import prisma from "./prisma";
 import { uploadAudio } from "./storage";
-import { PrismaClient } from "@prisma/client";
 import { toFile } from "openai";
-
-const prisma = new PrismaClient();
 
 export interface ProcessedMeeting {
   id: string;
