@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Tasks API] Error fetching tasks:", error);
     return NextResponse.json(
       { error: "Failed to fetch tasks" },

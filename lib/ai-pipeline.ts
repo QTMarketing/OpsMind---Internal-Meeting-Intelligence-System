@@ -1,9 +1,30 @@
 import openai from "./openai";
 import { uploadAudio } from "./storage";
-import { PrismaClient } from "@prisma/client";
 import { toFile } from "openai";
+import prisma from "@/lib/prisma";
 
-const prisma = new PrismaClient();
+type ExtractedTask = {
+  title: string;
+  assignee?: string | null;
+  dueDate?: string | null;
+};
+
+type ExtractedDecision = {
+  summary: string;
+  madeBy?: string | null;
+};
+
+type ExtractedIdea = {
+  content: string;
+  author?: string | null;
+};
+
+type PipelineExtraction = {
+  summary?: string;
+  tasks?: ExtractedTask[];
+  decisions?: ExtractedDecision[];
+  ideas?: ExtractedIdea[];
+};
 
 export interface ProcessedMeeting {
   id: string;
@@ -25,7 +46,7 @@ export async function runAIPipeline(audioFile: Buffer, originalName: string): Pr
   const fileName = `${Date.now()}-${originalName}`;
   
   console.log("[AI Pipeline] Uploading audio...");
-  const audioUrl = await uploadAudio(audioFile, fileName);
+  await uploadAudio(audioFile, fileName);
 
   console.log("[AI Pipeline] Transcribing with Whisper...");
   const transcription = await openai.audio.transcriptions.create({
@@ -58,7 +79,9 @@ export async function runAIPipeline(audioFile: Buffer, originalName: string): Pr
     response_format: { type: "json_object" }
   });
 
-  const extraction = JSON.parse(gptResponse.choices[0].message.content || "{}");
+  const extraction = JSON.parse(
+    gptResponse.choices[0].message.content || "{}",
+  ) as PipelineExtraction;
 
   console.log("[AI Pipeline] Saving to database...");
   const meeting = await prisma.meeting.create({
@@ -66,24 +89,24 @@ export async function runAIPipeline(audioFile: Buffer, originalName: string): Pr
       title: originalName.split(".")[0] || "Untitled Meeting",
       date: new Date(),
       transcript: transcriptText,
-      summary: extraction.summary,
+      summary: extraction.summary ?? "No summary generated.",
       tasks: {
-        create: extraction.tasks?.map((t: any) => ({
+        create: extraction.tasks?.map((t) => ({
           title: t.title,
-          assignee: t.assignee,
+          assignee: t.assignee ?? null,
           dueDate: t.dueDate ? new Date(t.dueDate) : null,
         })) || []
       },
       decisions: {
-        create: extraction.decisions?.map((d: any) => ({
+        create: extraction.decisions?.map((d) => ({
           summary: d.summary,
-          madeBy: d.madeBy,
+          madeBy: d.madeBy ?? null,
         })) || []
       },
       ideas: {
-        create: extraction.ideas?.map((i: any) => ({
+        create: extraction.ideas?.map((i) => ({
           content: i.content,
-          author: i.author,
+          author: i.author ?? null,
         })) || []
       }
     },

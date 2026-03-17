@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 /**
  * GET /api/meetings
@@ -20,7 +18,7 @@ export async function GET() {
     });
 
     return NextResponse.json({ meetings }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Meetings API] Error fetching meetings:", error);
     return NextResponse.json(
       { error: "Failed to fetch meetings" },
