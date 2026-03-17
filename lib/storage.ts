@@ -15,7 +15,7 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey);
  */
 export async function uploadAudio(file: Buffer | Blob, fileName: string): Promise<string> {
   const { data, error } = await supabase.storage
-    .from("audio")
+    .from("meeting-audio")
     .upload(fileName, file, {
       contentType: "audio/mpeg", // Or detect from extension
       upsert: true,
@@ -27,7 +27,7 @@ export async function uploadAudio(file: Buffer | Blob, fileName: string): Promis
   }
 
   const { data: { publicUrl } } = supabase.storage
-    .from("audio")
+    .from("meeting-audio")
     .getPublicUrl(data.path);
 
   return publicUrl;

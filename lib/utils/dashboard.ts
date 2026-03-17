@@ -9,7 +9,9 @@ export function normalizeDateKey(input: string) {
 }
 
 export function formatShortDate(input: string) {
+  if (!input) return "N/A";
   const date = new Date(input);
+  if (Number.isNaN(date.getTime())) return "N/A";
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -17,7 +19,9 @@ export function formatShortDate(input: string) {
 }
 
 export function formatFullDate(input: string) {
+  if (!input) return "N/A";
   const date = new Date(input);
+  if (Number.isNaN(date.getTime())) return "N/A";
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -38,11 +42,20 @@ export function getStatusTone(status: TaskStatus) {
 }
 
 export function buildTaskTrendData(tasks: Task[]) {
-  const sorted = [...tasks].sort((a, b) => a.deadline.localeCompare(b.deadline));
+  const sorted = [...tasks].sort((a, b) => {
+    // Handle both mock data 'deadline' and Prisma 'dueDate'
+    const aDate = (a as any).dueDate || a.deadline || new Date().toISOString();
+    const bDate = (b as any).dueDate || b.deadline || new Date().toISOString();
+    
+    // Convert to Date objects to sort safely instead of relying on localeCompare on potential null/undefined
+    return new Date(aDate).getTime() - new Date(bDate).getTime();
+  });
+  
   const byDay = new Map<string, { date: string; dateKey: string; due: number }>();
 
   for (const task of sorted) {
-    const key = normalizeDateKey(task.deadline);
+    const rawDate = (task as any).dueDate || task.deadline || new Date().toISOString();
+    const key = normalizeDateKey(rawDate);
     const current = byDay.get(key) ?? { date: formatShortDate(key), dateKey: key, due: 0 };
     current.due += 1;
     byDay.set(key, current);
@@ -52,11 +65,17 @@ export function buildTaskTrendData(tasks: Task[]) {
 }
 
 export function buildMeetingVolumeData(meetings: Meeting[]) {
-  const sorted = [...meetings].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const sorted = [...meetings].sort((a, b) => {
+    // Handle missing createdAt by falling back to current date
+    const aDate = a.createdAt || new Date().toISOString();
+    const bDate = b.createdAt || new Date().toISOString();
+    return new Date(aDate).getTime() - new Date(bDate).getTime();
+  });
+  
   return sorted.map((meeting) => ({
-    date: formatShortDate(meeting.createdAt),
-    dateKey: normalizeDateKey(meeting.createdAt),
+    date: formatShortDate(meeting.createdAt || new Date().toISOString()),
+    dateKey: normalizeDateKey(meeting.createdAt || new Date().toISOString()),
     meetings: 1,
-    tasks: meeting.taskCount,
+    tasks: meeting.taskCount || 0,
   }));
 }

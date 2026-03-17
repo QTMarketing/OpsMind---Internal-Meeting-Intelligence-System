@@ -95,11 +95,11 @@ export async function uploadAudio(
   onProgress?: (progress: number) => void,
 ): Promise<UploadAudioResponse> {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("audio", file);
 
   try {
     onProgress?.(20);
-    const response = await fetch("/api/audio-upload", {
+    const response = await fetch("/api/upload", {
       method: "POST",
       body: formData,
     });
