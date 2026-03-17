@@ -54,8 +54,9 @@ async function testUpload() {
       console.error(`❌ Upload failed with status ${response.status}:`);
       console.error(JSON.stringify(result, null, 2));
     }
-  } catch (error: any) {
-    console.error("❌ Request error:", error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("❌ Request error:", err.message);
   }
 }
 

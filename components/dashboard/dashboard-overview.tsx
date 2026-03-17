@@ -11,7 +11,9 @@ import { TaskFormDialog } from "@/components/dashboard/task-form-dialog";
 import { TasksTable } from "@/components/dashboard/tasks-table";
 import { useToast } from "@/components/providers/toast-provider";
 import {
+  useBulkUpdateTaskStatusMutation,
   useCreateTaskMutation,
+  useDeleteTaskMutation,
   useMeetingsQuery,
   useTasksQuery,
   useUpdateTaskMutation,
@@ -35,11 +37,14 @@ export function DashboardOverview() {
   const meetingsQuery = useMeetingsQuery();
   const createTaskMutation = useCreateTaskMutation();
   const updateTaskMutation = useUpdateTaskMutation();
+  const deleteTaskMutation = useDeleteTaskMutation();
+  const bulkUpdateStatusMutation = useBulkUpdateTaskStatusMutation();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [drilldownFilter, setDrilldownFilter] = useState<DrilldownFilter>("all");
   const [selectedDueDate, setSelectedDueDate] = useState<string | null>(null);
+  const [targetMeetingId, setTargetMeetingId] = useState<string | undefined>(undefined);
 
   const isKpiLoading = tasksQuery.isLoading || meetingsQuery.isLoading;
   const hasKpiError = tasksQuery.isError || meetingsQuery.isError;
@@ -114,8 +119,9 @@ export function DashboardOverview() {
     router.push(`/meetings?date=${dateKey}`);
   }
 
-  function openCreateDialog() {
+  function openCreateDialog(meetingId?: string) {
     setEditingTask(null);
+    setTargetMeetingId(meetingId);
     setDialogOpen(true);
   }
 
@@ -127,12 +133,16 @@ export function DashboardOverview() {
   function closeDialog() {
     setDialogOpen(false);
     setEditingTask(null);
+    setTargetMeetingId(undefined);
   }
 
   async function handleSubmitTask(values: TaskFormValues) {
     try {
       if (dialogMode === "create") {
-        await createTaskMutation.mutateAsync(values);
+        await createTaskMutation.mutateAsync({
+          ...values,
+          meetingId: targetMeetingId,
+        });
         pushToast({
           tone: "success",
           title: "Task created",
@@ -155,6 +165,43 @@ export function DashboardOverview() {
         tone: "error",
         title: "Unable to save task",
         message: "Please try again in a moment.",
+      });
+    }
+  }
+
+  async function handleDeleteTask(taskId: string) {
+    try {
+      await deleteTaskMutation.mutateAsync(taskId);
+      pushToast({
+        tone: "success",
+        title: "Task deleted",
+        message: "The task was successfully removed.",
+      });
+    } catch {
+      pushToast({
+        tone: "error",
+        title: "Unable to delete task",
+        message: "Please try again later.",
+      });
+    }
+  }
+
+  async function handleBulkComplete(taskIds: string[]) {
+    try {
+      await bulkUpdateStatusMutation.mutateAsync({
+        taskIds,
+        status: "completed",
+      });
+      pushToast({
+        tone: "success",
+        title: "Tasks updated",
+        message: `${taskIds.length} tasks marked as completed.`,
+      });
+    } catch {
+      pushToast({
+        tone: "error",
+        title: "Batch update failed",
+        message: "Some tasks could not be updated.",
       });
     }
   }
@@ -287,6 +334,8 @@ export function DashboardOverview() {
             overallTotal={tasks.length}
             onCreateTask={openCreateDialog}
             onEditTask={openEditDialog}
+            onDeleteTask={handleDeleteTask}
+            onBulkComplete={handleBulkComplete}
             contextFilters={contextFilters}
           />
         )}

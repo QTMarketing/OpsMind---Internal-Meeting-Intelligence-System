@@ -4,6 +4,7 @@ import pg from "pg";
 
 const prismaClientSingleton = () => {
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adapter = new PrismaPg(pool as any);
   return new PrismaClient({ adapter });
 };

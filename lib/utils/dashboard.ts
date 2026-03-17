@@ -44,8 +44,8 @@ export function getStatusTone(status: TaskStatus) {
 export function buildTaskTrendData(tasks: Task[]) {
   const sorted = [...tasks].sort((a, b) => {
     // Handle both mock data 'deadline' and Prisma 'dueDate'
-    const aDate = (a as any).dueDate || a.deadline || new Date().toISOString();
-    const bDate = (b as any).dueDate || b.deadline || new Date().toISOString();
+    const aDate = (a as Task & { dueDate?: string }).dueDate || a.deadline || new Date().toISOString();
+    const bDate = (b as Task & { dueDate?: string }).dueDate || b.deadline || new Date().toISOString();
     
     // Convert to Date objects to sort safely instead of relying on localeCompare on potential null/undefined
     return new Date(aDate).getTime() - new Date(bDate).getTime();
@@ -54,7 +54,7 @@ export function buildTaskTrendData(tasks: Task[]) {
   const byDay = new Map<string, { date: string; dateKey: string; due: number }>();
 
   for (const task of sorted) {
-    const rawDate = (task as any).dueDate || task.deadline || new Date().toISOString();
+    const rawDate = (task as Task & { dueDate?: string }).dueDate || task.deadline || new Date().toISOString();
     const key = normalizeDateKey(rawDate);
     const current = byDay.get(key) ?? { date: formatShortDate(key), dateKey: key, due: 0 };
     current.due += 1;

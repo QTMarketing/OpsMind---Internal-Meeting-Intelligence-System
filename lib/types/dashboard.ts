@@ -7,6 +7,8 @@ export type Task = {
   deadline: string;
   status: TaskStatus;
   project: string;
+  meetingId?: string;
+  meeting?: { title: string };
 };
 
 export type Meeting = {
@@ -27,6 +29,7 @@ export type TaskInput = {
   deadline: string;
   status: TaskStatus;
   project: string;
+  meetingId?: string;
 };
 
 export type UploadAudioResponse = {

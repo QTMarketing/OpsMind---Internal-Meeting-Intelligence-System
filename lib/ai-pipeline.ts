@@ -67,20 +67,20 @@ export async function runAIPipeline(audioFile: Buffer, originalName: string): Pr
       transcript: transcriptText,
       summary: extraction.summary,
       tasks: {
-        create: extraction.tasks?.map((t: any) => ({
+        create: extraction.tasks?.map((t: { title: string; assignee?: string; dueDate?: string }) => ({
           title: t.title,
           assignee: t.assignee,
           dueDate: t.dueDate ? new Date(t.dueDate) : null,
         })) || []
       },
       decisions: {
-        create: extraction.decisions?.map((d: any) => ({
+        create: extraction.decisions?.map((d: { summary: string; madeBy?: string }) => ({
           summary: d.summary,
           madeBy: d.madeBy,
         })) || []
       },
       ideas: {
-        create: extraction.ideas?.map((i: any) => ({
+        create: extraction.ideas?.map((i: { content: string; author?: string }) => ({
           content: i.content,
           author: i.author,
         })) || []

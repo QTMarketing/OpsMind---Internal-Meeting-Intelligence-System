@@ -156,3 +156,19 @@ export async function updateTask(taskId: string, input: TaskInput): Promise<Task
     return next;
   }
 }
+
+export async function deleteTask(taskId: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      throw new Error(`Delete failed (${response.status})`);
+    }
+  } catch {
+    const index = mockTaskStore.findIndex((task) => task.id === taskId);
+    if (index !== -1) {
+      mockTaskStore.splice(index, 1);
+    }
+  }
+}

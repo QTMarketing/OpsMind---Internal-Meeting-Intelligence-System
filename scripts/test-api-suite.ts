@@ -69,8 +69,9 @@ async function runTests() {
     const { total } = await tasksRes.json();
     console.log(`✅ Found ${total} total tasks in system.`);
 
-  } catch (error: any) {
-    console.error("\n❌ Test Suite Error:", error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("\n❌ Test Suite Error:", err.message);
     console.log("\n💡 Make sure the dev server is running with 'npm run dev'.");
   }
 

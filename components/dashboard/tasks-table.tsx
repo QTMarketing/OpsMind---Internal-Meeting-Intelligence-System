@@ -11,6 +11,10 @@ import {
   type SortingState,
   useReactTable,
   VisibilityState,
+  getGroupedRowModel,
+  getExpandedRowModel,
+  type GroupingState,
+  type ExpandedState,
 } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import type { Task } from "@/lib/types/dashboard";
@@ -19,8 +23,10 @@ import { formatFullDate, getStatusTone } from "@/lib/utils/dashboard";
 type TasksTableProps = {
   data: Task[];
   overallTotal: number;
-  onCreateTask: () => void;
+  onCreateTask: (meetingId?: string) => void;
   onEditTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
+  onBulkComplete: (taskIds: string[]) => void;
   contextFilters?: Array<{ id: string; label: string; onClear: () => void }>;
 };
 
@@ -31,12 +37,16 @@ export function TasksTable({
   overallTotal,
   onCreateTask,
   onEditTask,
+  onDeleteTask,
+  onBulkComplete,
   contextFilters = [],
 }: TasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "deadline", desc: false }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState({});
+  const [grouping, setGrouping] = useState<GroupingState>(["meeting"]);
+  const [expanded, setExpanded] = useState<ExpandedState>(true);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     owner: true,
     deadline: true,
@@ -69,6 +79,39 @@ export function TasksTable({
         enableSorting: false,
       },
       {
+        accessorFn: (row) => row.meeting?.title || "Standalone Tasks",
+        id: "meeting",
+        header: "Meeting",
+        cell: ({ row, getValue }) => (
+          <div className="flex items-center justify-between w-full pr-4">
+            <button
+              type="button"
+              className="flex items-center gap-2 cursor-pointer font-semibold text-foreground text-left"
+              onClick={row.getToggleExpandedHandler()}
+            >
+              <span className="text-muted text-[10px] opacity-70 w-3 text-center">
+                {row.getIsExpanded() ? "▼" : "▶"}
+              </span>
+              <span>{getValue<string>()}</span>
+              <span className="text-muted font-normal text-xs ml-1">({row.subRows.length})</span>
+            </button>
+            {row.original?.meetingId && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreateTask(row.original.meetingId);
+                }}
+                className="app-button app-button-ghost h-7 w-7 p-0 flex items-center justify-center rounded-full hover:bg-surface-muted"
+                title="Add task to this meeting"
+              >
+                +
+              </button>
+            )}
+          </div>
+        ),
+      },
+      {
         accessorKey: "title",
         header: "Task",
         cell: ({ row }) => <p className="font-medium text-foreground">{row.original.title}</p>,
@@ -99,18 +142,31 @@ export function TasksTable({
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <button
-            type="button"
-            onClick={() => onEditTask(row.original)}
-            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-surface-muted"
-          >
-            Edit
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onEditTask(row.original)}
+              className="rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:bg-surface-muted"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("Are you sure you want to delete this task?")) {
+                  onDeleteTask(row.original.id);
+                }
+              }}
+              className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-destructive hover:bg-surface-muted"
+            >
+              Delete
+            </button>
+          </div>
         ),
         enableSorting: false,
       },
     ],
-    [onEditTask],
+    [onEditTask, onDeleteTask, onCreateTask],
   );
 
   // TanStack Table currently triggers React Compiler compatibility warning in Next 16.
@@ -124,16 +180,22 @@ export function TasksTable({
       globalFilter,
       rowSelection,
       columnVisibility,
+      grouping,
+      expanded,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
+    onGroupingChange: setGrouping,
+    onExpandedChange: setExpanded,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
     enableRowSelection: true,
   });
 
@@ -151,7 +213,7 @@ export function TasksTable({
             </p>
             <button
               type="button"
-              onClick={onCreateTask}
+              onClick={() => onCreateTask()}
               className="app-button app-button-primary shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
             >
               New Task
@@ -215,8 +277,12 @@ export function TasksTable({
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled
-                className="app-button app-button-ghost cursor-not-allowed opacity-60"
+                onClick={() => {
+                  const selectedIds = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
+                  onBulkComplete(selectedIds);
+                  table.resetRowSelection();
+                }}
+                className="app-button app-button-ghost text-success hover:bg-surface"
               >
                 Mark Completed
               </button>
@@ -282,12 +348,31 @@ export function TasksTable({
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-b border-border/70 hover:bg-surface-muted">
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-2 py-2.5 text-sm text-foreground">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+              <tr 
+                key={row.id} 
+                className={`border-b ${row.getIsGrouped() ? "border-border bg-surface-muted/30" : "border-border/70 hover:bg-surface-muted"}`}
+              >
+                {row.getVisibleCells().map((cell) => {
+                  if (row.getIsGrouped() && cell.column.id === "meeting") {
+                    return (
+                      <td key={cell.id} colSpan={row.getVisibleCells().length - 1} className="px-1 py-2 text-sm text-foreground">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    );
+                  }
+                  if (row.getIsGrouped() && cell.column.id !== "select") return null;
+
+                  if (!row.getIsGrouped() && cell.column.id === "meeting") {
+                    // Spacer under the expansion arrow
+                    return <td key={cell.id} className="px-2 py-2 w-8" />;
+                  }
+
+                  return (
+                    <td key={cell.id} className="px-2 py-2.5 text-sm text-foreground">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

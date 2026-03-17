@@ -27,11 +27,12 @@ export async function POST(request: Request) {
       meeting: result // keep original for backwards compatibility or full object
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Upload API] Error processing upload:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ 
       error: "Internal server error during processing",
-      details: error.message 
+      details: errorMessage 
     }, { status: 500 });
   }
 }

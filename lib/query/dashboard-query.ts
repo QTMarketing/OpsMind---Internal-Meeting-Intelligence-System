@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import {
   createTask,
+  deleteTask,
   fetchMeetingDetail,
   fetchMeetings,
   fetchTasks,
@@ -97,6 +98,65 @@ export function useUpdateTaskMutation() {
       const previous = queryClient.getQueryData<Task[]>(dashboardQueryKeys.tasks) ?? [];
       queryClient.setQueryData<Task[]>(dashboardQueryKeys.tasks, (current = []) =>
         current.map((task) => (task.id === taskId ? { ...task, ...input } : task)),
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(dashboardQueryKeys.tasks, context.previous);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.tasks });
+    },
+  });
+}
+
+export function useDeleteTaskMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) => deleteTask(taskId),
+    onMutate: async (taskId) => {
+      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.tasks });
+      const previous = queryClient.getQueryData<Task[]>(dashboardQueryKeys.tasks) ?? [];
+      queryClient.setQueryData<Task[]>(dashboardQueryKeys.tasks, (current = []) =>
+        current.filter((task) => task.id !== taskId),
+      );
+      return { previous };
+    },
+    onError: (_error, _taskId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(dashboardQueryKeys.tasks, context.previous);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.tasks });
+    },
+  });
+}
+
+export function useBulkUpdateTaskStatusMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      taskIds,
+      status,
+    }: {
+      taskIds: string[];
+      status: Task["status"];
+    }) => {
+      const results = await Promise.all(
+        taskIds.map((id) => updateTask(id, { status } as TaskInput)),
+      );
+      return results;
+    },
+    onMutate: async ({ taskIds, status }) => {
+      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.tasks });
+      const previous = queryClient.getQueryData<Task[]>(dashboardQueryKeys.tasks) ?? [];
+      queryClient.setQueryData<Task[]>(dashboardQueryKeys.tasks, (current = []) =>
+        current.map((task) =>
+          taskIds.includes(task.id) ? { ...task, status } : task,
+        ),
       );
       return { previous };
     },
