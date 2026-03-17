@@ -8,8 +8,43 @@ import type {
   MeetingDetail,
   Task,
   TaskInput,
+  TaskStatus,
   UploadAudioResponse,
 } from "@/lib/types/dashboard";
+
+type UploadApiResponse = {
+  success: boolean;
+  meeting?: {
+    id?: string;
+  };
+};
+
+type MeetingsApiResponse = {
+  meetings: Array<{
+    id: string;
+    title: string;
+    date?: string;
+    summary: string;
+    createdAt?: string;
+    _count?: {
+      tasks?: number;
+      decisions?: number;
+      ideas?: number;
+    };
+  }>;
+};
+
+type TasksApiResponse = {
+  tasks: Array<{
+    id: string;
+    title: string;
+    status?: string;
+    assignee?: string;
+    dueDate: string;
+    meetingId?: string;
+  }>;
+  total: number;
+};
 
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(path, {
@@ -57,6 +92,18 @@ async function patchJson<T>(path: string, body: unknown): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+function normalizeTaskStatus(status: string | undefined): TaskStatus {
+  if (!status) return "pending";
+  const normalized = status.toLowerCase();
+  if (normalized === "pending") return "pending";
+  if (normalized === "in_progress" || normalized === "in progress") return "in_progress";
+  if (normalized === "completed" || normalized === "complete" || normalized === "done") {
+    return "completed";
+  }
+  if (normalized === "blocked") return "blocked";
+  return "pending";
 }
 
 export async function fetchTasks(): Promise<Task[]> {
@@ -108,8 +155,16 @@ export async function uploadAudio(
     if (!response.ok) {
       throw new Error(`Upload failed (${response.status})`);
     }
+    const payload = (await response.json()) as UploadApiResponse;
+    if (!payload.success || !payload.meeting?.id) {
+      throw new Error("Upload completed without a valid meeting id.");
+    }
     onProgress?.(100);
-    return (await response.json()) as UploadAudioResponse;
+    return {
+      meetingId: payload.meeting.id,
+      audioUrl: "",
+      status: "uploaded",
+    };
   } catch {
     onProgress?.(100);
     const id = `meeting-${Date.now()}`;

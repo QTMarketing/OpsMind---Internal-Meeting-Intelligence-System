@@ -4,7 +4,7 @@ import { runAIPipeline } from "@/lib/ai-pipeline";
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const file = formData.get("audio") as File;
+    const file = (formData.get("file") ?? formData.get("audio")) as File | null;
 
     if (!file) {
       return NextResponse.json({ error: "No audio file provided" }, { status: 400 });
@@ -27,11 +27,12 @@ export async function POST(request: Request) {
       meeting: result // keep original for backwards compatibility or full object
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[Upload API] Error processing upload:", error);
     return NextResponse.json({ 
       error: "Internal server error during processing",
-      details: error.message 
+      details: message
     }, { status: 500 });
   }
 }
