@@ -10,6 +10,7 @@ export interface ProcessedMeeting {
   tasks: Array<{ title: string; assignee?: string; dueDate?: string }>;
   decisions: Array<{ summary: string; madeBy?: string }>;
   ideas: Array<{ content: string; author?: string }>;
+  audioUrl?: string;
 }
 
 /**
@@ -92,5 +93,5 @@ export async function runAIPipeline(audioFile: Buffer, originalName: string): Pr
     }
   });
 
-  return meeting as unknown as ProcessedMeeting;
+  return { ...meeting, audioUrl } as unknown as ProcessedMeeting;
 }

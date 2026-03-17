@@ -35,3 +35,41 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * POST /api/tasks
+ * 
+ * Manually creates a new task associated with a meeting.
+ */
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { title, meetingId, assignee, dueDate, description, project } = body;
+
+    if (!title || !meetingId) {
+      return NextResponse.json(
+        { error: "Title and meetingId are required" },
+        { status: 400 }
+      );
+    }
+
+    const task = await prisma.task.create({
+      data: {
+        title,
+        meetingId,
+        assignee,
+        description,
+        ...(project !== undefined && { project }),
+        dueDate: dueDate ? new Date(dueDate) : null,
+      },
+    });
+
+    return NextResponse.json({ task }, { status: 201 });
+  } catch (error: any) {
+    console.error("[Tasks API] Error creating task:", error);
+    return NextResponse.json(
+      { error: "Failed to create task" },
+      { status: 500 }
+    );
+  }
+}
+

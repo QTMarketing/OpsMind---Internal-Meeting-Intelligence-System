@@ -21,7 +21,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      meeting: result 
+      meetingId: result.id,
+      audioUrl: result.audioUrl || "",
+      status: "uploaded",
+      meeting: result // keep original for backwards compatibility or full object
     }, { status: 200 });
 
   } catch (error: any) {

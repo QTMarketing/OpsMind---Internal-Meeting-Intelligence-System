@@ -61,7 +61,8 @@ async function patchJson<T>(path: string, body: unknown): Promise<T> {
 
 export async function fetchTasks(): Promise<Task[]> {
   try {
-    return await getJson<Task[]>("/api/tasks");
+    const data = await getJson<{ tasks: Task[] }>("/api/tasks");
+    return data.tasks;
   } catch {
     return [...mockTaskStore];
   }
@@ -69,7 +70,8 @@ export async function fetchTasks(): Promise<Task[]> {
 
 export async function fetchMeetings(): Promise<Meeting[]> {
   try {
-    return await getJson<Meeting[]>("/api/meetings");
+    const data = await getJson<{ meetings: Meeting[] }>("/api/meetings");
+    return data.meetings;
   } catch {
     return [...mockMeetingStore];
   }
@@ -77,7 +79,8 @@ export async function fetchMeetings(): Promise<Meeting[]> {
 
 export async function fetchMeetingDetail(meetingId: string): Promise<MeetingDetail> {
   try {
-    return await getJson<MeetingDetail>(`/api/meetings/${meetingId}`);
+    const data = await getJson<{ meeting: MeetingDetail }>(`/api/meetings/${meetingId}`);
+    return data.meeting;
   } catch {
     const detail = mockMeetingDetails[meetingId];
     if (!detail) {
