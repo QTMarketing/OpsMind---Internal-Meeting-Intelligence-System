@@ -46,7 +46,7 @@ export function TasksTable({
   const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState({});
   const [grouping, setGrouping] = useState<GroupingState>(["meeting"]);
-  const [expanded, setExpanded] = useState<ExpandedState>(true);
+  const [expanded, setExpanded] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     owner: true,
     deadline: true,

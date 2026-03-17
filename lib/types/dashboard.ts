@@ -32,6 +32,11 @@ export type TaskInput = {
   meetingId?: string;
 };
 
+export type MeetingUpdateInput = {
+  title?: string;
+  summary?: string;
+};
+
 export type UploadAudioResponse = {
   meetingId: string;
   audioUrl: string;

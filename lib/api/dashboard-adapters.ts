@@ -6,6 +6,7 @@ import {
 import type {
   Meeting,
   MeetingDetail,
+  MeetingUpdateInput,
   Task,
   TaskInput,
   UploadAudioResponse,
@@ -169,6 +170,47 @@ export async function deleteTask(taskId: string): Promise<void> {
     const index = mockTaskStore.findIndex((task) => task.id === taskId);
     if (index !== -1) {
       mockTaskStore.splice(index, 1);
+    }
+  }
+}
+
+export async function updateMeeting(
+  meetingId: string,
+  input: MeetingUpdateInput,
+): Promise<Meeting> {
+  try {
+    const data = await patchJson<{ meeting: Meeting }>(`/api/meetings/${meetingId}`, input);
+    return data.meeting;
+  } catch {
+    const index = mockMeetingStore.findIndex((m) => m.id === meetingId);
+    if (index === -1) {
+      throw new Error(`Meeting not found: ${meetingId}`);
+    }
+    const next = { ...mockMeetingStore[index], ...input };
+    mockMeetingStore[index] = next;
+    
+    // Also update detail if exists
+    if (mockMeetingDetails[meetingId]) {
+      mockMeetingDetails[meetingId] = { ...mockMeetingDetails[meetingId], ...input };
+    }
+    
+    return next;
+  }
+}
+
+export async function deleteMeeting(meetingId: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/meetings/${meetingId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      throw new Error(`Delete failed (${response.status})`);
+    }
+  } catch {
+    const index = mockMeetingStore.findIndex((m) => m.id === meetingId);
+    if (index !== -1) {
+      mockMeetingStore.splice(index, 1);
+      delete mockMeetingDetails[meetingId];
     }
   }
 }

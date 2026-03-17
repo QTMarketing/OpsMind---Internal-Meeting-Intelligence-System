@@ -5,14 +5,16 @@ import {
 } from "@tanstack/react-query";
 import {
   createTask,
+  deleteMeeting,
   deleteTask,
   fetchMeetingDetail,
   fetchMeetings,
   fetchTasks,
+  updateMeeting,
   updateTask,
   uploadAudio,
 } from "@/lib/api/dashboard-adapters";
-import type { Task, TaskInput } from "@/lib/types/dashboard";
+import type { Meeting, MeetingUpdateInput, Task, TaskInput } from "@/lib/types/dashboard";
 
 export const dashboardQueryKeys = {
   tasks: ["dashboard", "tasks"] as const,
@@ -170,3 +172,55 @@ export function useBulkUpdateTaskStatusMutation() {
     },
   });
 }
+
+export function useUpdateMeetingMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ meetingId, input }: { meetingId: string; input: MeetingUpdateInput }) =>
+      updateMeeting(meetingId, input),
+    onMutate: async ({ meetingId, input }) => {
+      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.meetings });
+      const previous = queryClient.getQueryData<Meeting[]>(dashboardQueryKeys.meetings) ?? [];
+      queryClient.setQueryData<Meeting[]>(dashboardQueryKeys.meetings, (current = []) =>
+        current.map((meeting) => (meeting.id === meetingId ? { ...meeting, ...input } : meeting)),
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(dashboardQueryKeys.meetings, context.previous);
+      }
+    },
+    onSettled: (data) => {
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.meetings });
+      if (data?.id) {
+        void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.meetingDetail(data.id) });
+      }
+    },
+  });
+}
+
+export function useDeleteMeetingMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (meetingId: string) => deleteMeeting(meetingId),
+    onMutate: async (meetingId) => {
+      await queryClient.cancelQueries({ queryKey: dashboardQueryKeys.meetings });
+      const previous = queryClient.getQueryData<Meeting[]>(dashboardQueryKeys.meetings) ?? [];
+      queryClient.setQueryData<Meeting[]>(dashboardQueryKeys.meetings, (current = []) =>
+        current.filter((meeting) => meeting.id !== meetingId),
+      );
+      return { previous };
+    },
+    onError: (_error, _meetingId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(dashboardQueryKeys.meetings, context.previous);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.meetings });
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.tasks });
+    },
+  });
+}
+

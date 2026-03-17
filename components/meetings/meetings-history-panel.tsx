@@ -4,8 +4,15 @@ import { useMemo, useState } from "react";
 import { EmptyState } from "@/components/foundation/empty-state";
 import { ErrorState } from "@/components/foundation/error-state";
 import { SkeletonBlock } from "@/components/foundation/skeleton-block";
-import { useMeetingDetailQuery, useMeetingsQuery } from "@/lib/query/dashboard-query";
+import { 
+  useMeetingDetailQuery, 
+  useMeetingsQuery,
+  useUpdateMeetingMutation,
+  useDeleteMeetingMutation,
+} from "@/lib/query/dashboard-query";
 import { formatFullDate } from "@/lib/utils/dashboard";
+import type { Meeting } from "@/lib/types/dashboard";
+import { MeetingFormDialog } from "./meeting-form-dialog";
 
 export function MeetingsHistoryPanel() {
   const meetingsQuery = useMeetingsQuery();
@@ -30,6 +37,19 @@ export function MeetingsHistoryPanel() {
 
   const activeMeetingId = selectedMeetingId ?? filteredMeetings[0]?.id ?? null;
   const detailQuery = useMeetingDetailQuery(activeMeetingId);
+
+  // Mutations
+  const updateMutation = useUpdateMeetingMutation();
+  const deleteMutation = useDeleteMeetingMutation();
+
+  // Dialog state
+  const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
+
+  const handleDelete = (id: string, title: string) => {
+    if (confirm(`Are you sure you want to delete "${title}"? All associated tasks, decisions, and ideas will also be removed.`)) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   if (meetingsQuery.isLoading) {
     return (
@@ -116,13 +136,29 @@ export function MeetingsHistoryPanel() {
                   <td className="px-2 py-2.5 text-sm text-foreground">{formatFullDate(meeting.createdAt)}</td>
                   <td className="px-2 py-2.5 text-sm text-foreground">{meeting.taskCount}</td>
                   <td className="px-2 py-2.5 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMeetingId(meeting.id)}
-                      className="app-button app-button-ghost hover:bg-surface"
-                    >
-                      View Details
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMeetingId(meeting.id)}
+                        className="app-button app-button-ghost hover:bg-surface"
+                      >
+                        Details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingMeeting(meeting)}
+                        className="app-button app-button-ghost text-muted hover:bg-surface hover:text-foreground"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(meeting.id, meeting.title)}
+                        className="app-button app-button-ghost text-destructive hover:bg-destructive/10"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -157,6 +193,23 @@ export function MeetingsHistoryPanel() {
           </div>
         ) : null}
       </div>
+
+      <MeetingFormDialog
+        open={Boolean(editingMeeting)}
+        meeting={editingMeeting}
+        submitting={updateMutation.isPending}
+        onClose={() => setEditingMeeting(null)}
+        onSubmit={(values) => {
+          if (editingMeeting) {
+            updateMutation.mutate(
+              { meetingId: editingMeeting.id, input: values },
+              {
+                onSuccess: () => setEditingMeeting(null),
+              }
+            );
+          }
+        }}
+      />
     </section>
   );
 }
